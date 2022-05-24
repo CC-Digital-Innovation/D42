@@ -5,7 +5,6 @@ import csv
 import json
 from queue import Empty
 from tkinter.font import names
-from unittest import skipIf
 import requests
 import pandas as pd
 import urllib3
@@ -34,11 +33,24 @@ for e in range(len(dictionary.get('Devices'))):
 #print(deviceNames)
 
 #---------------------------------------------------------------------------------------------
-##Device location is 'Location' **SHOULD ONLY WORK IN VERIZON BOX NOT IN SANDBOX**
+## [NEEDS TESTING IN VERIZON]
+# Device location is 'Location' **SHOULD ONLY WORK IN VERIZON BOX NOT IN SANDBOX**
 #if dictionary is Empty:
 locations = []
+i = 0
+
+for e in dictionary['Devices'][:]:
+    if 'custom_fields' in e:
+        for x in e['custom_fields']:
+           if 'hdd_details' in x:
+               locations.append(dictionary.get('Devices')[x].get('location'))
+           elif 'location' not in x:
+                locations.append(None)
+    i=i+1
+'''
 for e in range(len(dictionary.get('Devices'))):
     locations.append('')
+'''
 '''
 for e in range(len(dictionary.get('Devices'))):
     if len(dictionary.get('Devices')[e]['location']) == 0:
@@ -91,10 +103,22 @@ cc_types = []
 for e in range(len(dictionary.get('Devices'))):
     cc_types.append('')
 #---------------------------------------------------------------------------------------------
+## [WORKING] NEED TO TEST
 ## 'Manufacturer' in ServicenNow is 'manufacturer' in Verizon_Box
 ##will not pull correctly, must be more nested...
 #if dictionary is Empty:
-    manufacturer = []
+manufacturer = [[] for i in range(len(dictionary['Devices'][:]))]
+i = 0
+
+for e in dictionary['Devices'][:]:
+    if 'custom_fields' in e:
+        for x in e['custom_fields']:
+           if 'manufacturer' in x:
+               manufacturer[i].append(x['manufacturer'])
+           elif 'manufacturer' not in x:
+                manufacturer[i].append(None)
+    i=i+1
+
 for e in range(len(dictionary.get('Devices'))):
     manufacturer.append('')
 '''
@@ -118,46 +142,21 @@ for e in range(len(dictionary.get('Devices'))):
         model_numbers.append(dictionary.get('Devices')[e]['hw_model'])
 
 #---------------------------------------------------------------------------------------------
-## [NOT WORKING]
+## [WORKING]
 ## 'IP Address [Configuration Item]' in ServiceNow is 'IP Address' in Verizon_Box GUI (not in the output.txt)
 ## using temporarily subnet or 'ip' since it's the closest to the IP Address, but missing part of it...
 #if dictionary is Empty:
-ip_addresses = []
-print(dictionary.get('Devices')[0]['ip_addresses'][0].get('ip'))
-print(len(dictionary.get('Devices')[-1]['ip_addresses'][-1]))
-
-for e in range(len(dictionary.get('Devices'))):
-    #ip_addresses.append('x.x.x.x.x')
-
-    '''if 'last_updated' in dictionary.get('Devices')[e].keys() and 'ip' not in dictionary.get('Devices')[e]['ip_addresses'][e].keys():
-        ip_addresses.append('')'''
-    if 'ip_addresses' in dictionary.get('Devices')[e] is None:
-        ip_addresses.append('')
-    elif 'ip' in dictionary.get('Devices')[e]['ip_addresses'][e].keys():
-        ip_addresses.append(dictionary.get('Devices')[e]['ip_addresses'][e].get('ip'))
-
-print(ip_addresses)
-
-
-'''
-    for e in range(len(dictionary.get('Devices'))):
-        if dictionary.get('Devices')[e]['ip_addresses']: #If this works then the addresses will append properly.
-            ip_addresses.append(None) 
-            #or ip_addresses.append('')
-        else:
-            #converts list to string
-            makeitastring = ''.join(map(str, dictionary.get('Devices')[e]['ip_addresses']))
-            dictionary = makeitastring.translate({ord('{'): None})
-            dictionary = dictionary.replace("\'type\': None", '')
-            dictionary = '{' + dictionary.translate({ord('}'): None}) + '}'
-            dictionary = dictionary.replace(', }', '}')
-            dictionary = ast.literal_eval(dictionary)
-            print(dictionary)
-            print(type(dictionary))
-            ip_addresses.append(dictionary.get('ip'))
-
-    print(ip_addresses)
-'''
+ip_addresses = [[] for i in range(len(dictionary['Devices'][:]))]
+i = 0
+print(len(ip_addresses))
+print(len(dictionary['Devices'][:]))
+for e in dictionary['Devices'][:]:
+    if 'ip_addresses' in e:
+        for x in e['ip_addresses']:
+           ip_addresses[i].append(x['ip'])
+           #if len(x) in e['ip_addresses'] == 0:
+           #    ip_addresses[i].append(None)
+    i=i+1
 
 #---------------------------------------------------------------------------------------------
 ## Host Name [Configuration Item] in ServiceNow is 'virtual_host_name' in Verizon_Box (I think?)
@@ -182,32 +181,24 @@ for e in range(len(dictionary.get('Devices'))):
 #print(serial_numbers)
 
 #---------------------------------------------------------------------------------------------
-## [NOT WORKING PROPERLY]
+## [WORKING]
 ## HWAddress (macaddress) belongs to 'MAC Address [Configuration Item]' in CSV file
 ##Needs to filter tuples, works currently for Empty and dictionaries.
 #if dictionary is Empty:
-mac_addresses = []
-for e in range(len(dictionary.get('Devices'))):
-    mac_addresses.append('x.x.x.x.x')
-'''
-for e in range(len(dictionary.get('Devices'))):
-    mac_address.append('')
-    if len(dictionary.get('Devices')[2]['ip_addresses']) == 0:
-        print('ip_addresses:', 'Empty')
-    else:
-        ip = 'ip_addresses:', dictionary.get('Devices')[2]['ip_addresses']
+mac_addresses = [[] for i in range(len(dictionary['Devices'][:]))]
+i = 0
 
-        #converts list to string
-        makeitastring = ''.join(map(str, ip))
-        #removes unecessary chars to create dictionary
-        makeitastring = makeitastring.replace('ip_addresses:[', '')
-        dictionary = ast.literal_eval(makeitastring[:-1])
-        print(dictionary)
-        print(dictionary.get('macaddress'))
-'''
+for e in dictionary['Devices'][:]:
+    if 'ip_addresses' in e:
+        for x in e['ip_addresses']:
+           if 'macaddress' in x:
+               mac_addresses[i].append(x['macaddress'])
+           elif 'macaddress' not in x:
+                mac_addresses[i].append(None)
+    i=i+1
 
 #---------------------------------------------------------------------------------------------
-## [NOT WORKING]
+## [NOT WORKING; NEEDS TESTING IN VERIZON]
 ## 'Description [Configuration Item]' in ServiceNow is 'description' in Verizon_Box
 ## Needs to be coded in Verizon_Box since D42 sandbox is not giving proper output.
 ## Test in the box and parse hdd_details to get description or it might retrieve from just Devices than hdd_details
@@ -270,7 +261,7 @@ for e in range(len(dictionary.get('Devices'))):
 '''
 #---------------------------------------------------------------------------------------------
 
-# 12/16 working properly
+# 16/17 working properly (test in Verizon: description(unsure, test it), add(notes? *optional*), and manufacturer(working))
 CMDB_Items = ['Name', 
               'Location', 
               'Used for [Configuration Item]', 
@@ -279,11 +270,11 @@ CMDB_Items = ['Name',
               'CC Type [Configuration Item]',         #IGNORED IN CODE
               'Manufacturer', 
               'Model number [Configuration Item]', 
-              'IP Address [Configuration Item',       #WIP
+              'IP Address [Configuration Item',       
               'Host Name [Configuration Item]', 
               'Serial number', 
-              'MAC Address [Configuration Item]',     #WIP
-              'Description [Configuration Item]',     #WIP
+              'MAC Address [Configuration Item]',     
+              'Description [Configuration Item]',     #In Verizon
               'Username [Configuration Item]',        #IGNORED IN CODE
               'FS Password [Configuration Item]',     #IGNORED IN CODE
               'Active Contract [Configuration Item]', #Always 'True'
