@@ -17,6 +17,7 @@ config.read('config.ini')
 D42_username = config.get('Device42', 'user')
 D42_password = config.get('Device42', 'pass')
 D42_url = config.get('Device42', 'url')
+D42_location = config.get('Device42', 'location')
 D42_TYPE = config.get('Device42', 'content-type')
 
 
@@ -52,10 +53,10 @@ i = 0
 
 for e in dictionary['Devices'][:]:
     if 'location' in e:
-        locations[i].append("VZ Kearny, NJ")
+        locations[i].append(D42_location)
         #locations[i].append(e['location'])
     elif 'location' not in e:
-        locations[i].append("VZ Kearny, NJ")
+        locations[i].append(D42_location)
     i=i+1  
 #---------------------------------------------------------------------------------------------
 
@@ -190,14 +191,6 @@ for values in mac_addresses:
         mac_address.append("")
     else:
         mac_address.append(values[0])
-'''
-for e in len(mac_addresses):
-    newLst.append(mac_addresses[e][0])
-
-mac_addresses = newLst
-'''
-
-        
 
 #---------------------------------------------------------------------------------------------
 
