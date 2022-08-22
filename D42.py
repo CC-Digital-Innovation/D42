@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import csv
 import json
+import time
+from loguru import logger
 import requests
 import urllib3
 import configparser
@@ -37,8 +39,14 @@ active_contract=[]
 device_sub_type=[]
 discovery_source=[]
 
+
+logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
+@logger.catch
+#rename function that is not credentials since it stores more than that
 def credentials():
+    logger.debug("Initializing configuration parser...")
     config = configparser.ConfigParser()
+    logger.debug("Reading configuration file 'config.ini'...")
     config.read('config.ini')
     #credentials for D42
     D42_username = config.get('Device42', 'user')
@@ -62,27 +70,36 @@ def credentials():
         SNOW_url
     }
 
+
+logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
+@logger.catch
 def pullD42():
+    logger.warning("Disabled all unverified HTTPS warnings.")
     ##disables warning for unverified HTTPS (url)
     urllib3.disable_warnings()
 
     headers = {
                 'Content-Type': D42_type
             }
-
+    logger.debug("Requesting 'GET' Device42 Devices data...")
     r = requests.request("GET", D42_url, auth=(D42_username, D42_password), headers=headers, verify=False)
     dictionary = json.loads(r.text)
-    #print(dictionary)
+    logger.success("Pulled JSON payload into a dictionary.")
 
     return dictionary
     
+logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
+@logger.catch
 def fields():
     #---------------------------------------------------------------------------------------------    
     ##Device name is 'Name'
+    logger.success("Appending 'Name' data...")
     deviceNames = []
     for e in range(len(dictionary.get('Devices'))):
         deviceNames.append(dictionary.get('Devices')[e]['name'])
+    logger.success("Appending of 'Name' complete.")
     #---------------------------------------------------------------------------------------------
+    logger.debug("Appending 'ID' data...")
     device_IDs = [[] for i in range(len(dictionary['Devices'][:]))]
     i = 0
 
@@ -92,7 +109,10 @@ def fields():
         elif 'id' not in e:
             device_IDs[i].append(None)
         i=i+1  
+    logger.success("Appending of 'ID' complete.")
 
+    #---------------------------------------------------------------------------------------------
+    logger.debug("Appending 'Location' data...")
     locations = [[] for i in range(len(dictionary['Devices'][:]))]
     i = 0
 
@@ -103,17 +123,20 @@ def fields():
         elif 'location' not in e:
             locations[i].append(D42_location)
         i=i+1  
+    logger.success("Appending of 'Location' complete.")
     #---------------------------------------------------------------------------------------------
 
     ##Used For [Configuration Item] --> not in Verizon_Box, entered Manually ex.: 'Production' as the value
     ##BUT, it's probably 'service_level'
     #if dictionary is Empty:
+    logger.debug("Appending 'Used For [Configuration Item]' data...")
     service_levels = []
     for e in range(len(dictionary.get('Devices'))):
         if dictionary.get('Devices')[e]['service_level'] is None:
                 service_levels.append('')
         else:
             service_levels.append(dictionary.get('Devices')[e]['service_level'])
+    logger.success("Appending of 'Used For [Configuration Item]' complete.")
 
     #---------------------------------------------------------------------------------------------
 
@@ -121,26 +144,32 @@ def fields():
     ## Status
     ##Status in ServiceNow is ____ in Verizon_Box? I don't see it.
     #if dictionary is Empty:
+    logger.debug("Appending 'Status' data...")
     statuses = []
     #if dictionary is Empty:
     for e in range(len(dictionary.get('Devices'))):
         statuses.append('Installed')
+    logger.success("Appending of 'Status' complete.")
 
     #---------------------------------------------------------------------------------------------
 
     ## [MISSING]? set to default 'Storage Device'
     ##Class in ServiceNow is ____ in Verizon_Box? IDK.
     #if dictionary is Empty:
+    logger.debug("Appending 'Storage Device' data...")
     classes = []
     for e in range(len(dictionary.get('Devices'))):
         classes.append('Storage Device')
+    logger.success("Appending of 'Storage Device' complete.")
 
     #---------------------------------------------------------------------------------------------
 
     ## 'CC Type' not in Verizon_Box
+    logger.debug("Ignoring 'CC Type'...")
     cc_types = []
     for e in range(len(dictionary.get('Devices'))):
         cc_types.append('')
+    logger.success("Ignoring of 'CC Type' complete.")
 
     #---------------------------------------------------------------------------------------------
 
@@ -148,6 +177,7 @@ def fields():
     ## 'Manufacturer' in ServicenNow is 'manufacturer' in Verizon_Box
     ##will not pull correctly, must be more nested...
     #if dictionary is Empty:
+    logger.debug("Appending 'Manufacturer' data...")
     manufacturer = [[] for i in range(len(dictionary['Devices'][:]))]
     i = 0
 
@@ -157,17 +187,20 @@ def fields():
         elif 'manufacturer' not in e:
             manufacturer[i].append(None)
         i=i+1
+    logger.success("Appending of 'Manufacturer' complete.")
 
     #---------------------------------------------------------------------------------------------
 
     ## 'Model Number [Configuration Item]' in ServiceNow is Hardware Model 'hw_model' in Verizon_Box
     #if dictionary is Empty:
+    logger.debug("Appending 'Model Number [Configuration Item]' data...")
     model_numbers = []
     for e in range(len(dictionary.get('Devices'))):
         if dictionary.get('Devices')[e]['hw_model'] is None:
             model_numbers.append(None)
         else:
             model_numbers.append(dictionary.get('Devices')[e]['hw_model'])
+    logger.success("Appending of 'Model Number [Configuration Item]' complete.")
 
     #---------------------------------------------------------------------------------------------
 
@@ -175,6 +208,7 @@ def fields():
     ## 'IP Address [Configuration Item]' in ServiceNow is 'IP Address' in Verizon_Box GUI (not in the output.txt)
     ## using temporarily subnet or 'ip' since it's the closest to the IP Address, but missing part of it...
     #if dictionary is Empty:
+    logger.debug("Appending 'IP Address [Configuration Item]' data...")
     ip_addr = [[] for i in range(len(dictionary['Devices'][:]))]
     i = 0
 
@@ -190,27 +224,32 @@ def fields():
             ip_addresses.append("")
         else:
             ip_addresses.append(values[0])
+    logger.success("Appending of 'IP Address [Configuration Item]' complete.")
     #---------------------------------------------------------------------------------------------
 
     ## Host Name [Configuration Item] in ServiceNow is 'virtual_host_name' in Verizon_Box (I think?)
     #if dictionary is Empty:
+    logger.debug("Appending 'Host Name [Configuration Item]' data...")
     virtual_host_names = []
     for e in range(len(dictionary.get('Devices'))):
         if dictionary.get('Devices')[e]['virtual_host_name'] is None:
             virtual_host_names.append(None)
         else:
             virtual_host_names.append(dictionary.get('Devices')[e]['virtual_host_name'])
+    logger.success("Appending of 'Host Name [Configuration Item]' complete.")
 
     #---------------------------------------------------------------------------------------------
 
     ## Serial number in ServiceNow is 'serial_no' in Verizon_Box
     #if dictionary is Empty:
+    logger.debug("Appending 'Serial Number' data...")
     serial_numbers = []
     for e in range(len(dictionary.get('Devices'))):
         if dictionary.get('Devices')[e]['serial_no'] is None:
             serial_numbers.append(None)
         else:
             serial_numbers.append(dictionary.get('Devices')[e]['serial_no'])
+    logger.success("Appending of 'Serial Number' complete.")
 
     #---------------------------------------------------------------------------------------------
 
@@ -218,6 +257,7 @@ def fields():
     ## HWAddress (macaddress) belongs to 'MAC Address [Configuration Item]' in CSV file
     ##Needs to filter tuples, works currently for Empty and dictionaries.
     #if dictionary is Empty:
+    logger.debug("Appending 'MAC Address [Configuration Item]' data...")
     mac_addresses = [[] for i in range(len(dictionary['Devices'][:]))]
     i = 0
 
@@ -236,6 +276,7 @@ def fields():
             mac_address.append("")
         else:
             mac_address.append(values[0])
+    logger.success("Appending of 'MAC Address [Configuration Item]' complete.")
 
     #---------------------------------------------------------------------------------------------
 
@@ -244,6 +285,7 @@ def fields():
     ## Needs to be coded in Verizon_Box since D42 sandbox is not giving proper output.
     ## Test in the box and parse hdd_details to get description or it might retrieve from just Devices than hdd_details
     #if dictionary is Empty:
+    logger.success("Appending 'Description' data....")
     descriptions = [[] for i in range(len(dictionary['Devices'][:]))]
     i = 0
 
@@ -253,20 +295,25 @@ def fields():
         elif 'description' not in e:
             descriptions[i].append(None)
         i=i+1
+    logger.success("Appending of 'Description' complete.")
 
     #---------------------------------------------------------------------------------------------
 
     ## Username [IGNORED, manually entered]
+    logger.debug("Ignoring 'Username'...")
     usernames = []
     for e in range(len(dictionary.get('Devices'))):
         usernames.append('')
+    logger.success("Ignored 'Username'.")
 
     #---------------------------------------------------------------------------------------------
 
     ## Password [IGNORED, manually entered]
+    logger.debug("Ignoring 'FS Passwords'...")
     fs_passwords = []
     for e in range(len(dictionary.get('Devices'))):
         fs_passwords.append('')
+    logger.success("Ignored 'FS Passwords'.")
 
     #---------------------------------------------------------------------------------------------
 
@@ -274,16 +321,19 @@ def fields():
     ## Always True
     ## [WORKING PROPERLY]
     #if dictionary is Empty:
+    logger.debug("Appending 'Active Contract [Configuration Item]' data...")
     active_contract = []
     for e in range(len(dictionary.get('Devices'))):
         active_contract.append(True)
         #print(len(active_contract))
+    logger.success("Appending of 'Active Contract [Configuration Item]' complete.")
 
     #---------------------------------------------------------------------------------------------
 
     ## [WORKING] Physical subtype (device_sub_type) in Verizon_Box is ____ in ServiceNow? Idk.
     ##D42 sandbox is called (virtual_subtype)
     #if dictionary is Empty:
+    logger.debug("Appending 'Physical Subtype' data...'")
     device_sub_type = [[] for i in range(len(dictionary['Devices'][:]))]
     i = 0
 
@@ -293,17 +343,20 @@ def fields():
         elif 'device_sub_type' not in e:
             device_sub_type[i].append(None)
         i=i+1
+    logger.success("Appending of 'Phyiscal Subtype' complete.")
 
     #---------------------------------------------------------------------------------------------
     # 'rack' is location' but for now default and hardcode to 'Location'
     # which will then be read and replaced by a location that will be
     # posted to ServiceNow/D42
+    logger.debug("Appending of 'Location' complete.")
     rack_locations = []
     for e in range(len(dictionary.get('Devices'))):
         rack_locations.append('Location')
+    logger.success("Appending of 'Discovery Source' complete.")
 
     #---------------------------------------------------------------------------------------------
-
+    logger.debug("Appending 'Customer' data...")
     # 'customer'
     customers = [[] for i in range(len(dictionary['Devices'][:]))]
     i = 0
@@ -314,12 +367,15 @@ def fields():
         elif 'customer' not in e:
             customers[i].append("")
         i=i+1
+    logger.success("Appending of 'Customer' complete.")
 
     #---------------------------------------------------------------------------------------------
 
+    logger.debug("Appending 'Discovery Source' data...")
     discovery_source = []
     for e in range(len(dictionary.get('Devices'))):
         discovery_source.append('Device42')
+    logger.success("Appending of 'Discovery Source' complete.")
 
     #---------------------------------------------------------------------------------------------
     return {device_IDs,
@@ -343,6 +399,8 @@ def fields():
             device_sub_type,
             discovery_source}
 
+logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
+@logger.catch
 def createCSV():
     # [WORKING]
     CMDB_Items = [
@@ -389,16 +447,20 @@ def createCSV():
                         device_sub_type,
                         discovery_source
                         ))
-
+    logger.debug("Creating CSV file...")
     with open('Verizon_Data.csv', 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
 
+        logger.debug("Writing headers to CSV file...")
         # write the headers
         writer.writerow(CMDB_Items)
+
+        logger.debug("Writing rows to CSV file...")
         # write the rows
         for data in CMDB_Data:
             writer.writerow(data)
 
+        logger.success("Successfully written data to CSV file...")
     # Removes all unnecessary chars/symbols from csv file
     # reading the CSV file
     text = open("Verizon_Data.csv", "r")
@@ -407,6 +469,7 @@ def createCSV():
     # csvfile.csv and formed as a string
     text = ''.join([i for i in text]) 
 
+    logger.debug("Removing special characters and unwanted data from CSV file...")
     # search and replace the contents
     text = text.replace("[None]", "") 
     text = text.replace("[]", "") 
@@ -418,12 +481,16 @@ def createCSV():
 
     # testD42_Data.csv is the output file opened in write mode
     x = open("Verizon_Data.csv","w")
-
+    
     # all the replaced text is written in the output.csv file
     x.writelines(text)
     x.close()
+    logger.success("Successfully re-written data to CSV file to completion.")
 
+logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
+@logger.catch
 def postSNOW():
+    logger.warning("Disabled all unverified HTTPS warnings.")
     ##disables warning for unverified HTTPS (url)
     urllib3.disable_warnings()
 
@@ -432,18 +499,28 @@ def postSNOW():
     ##Gets CSV file path
     PATH = os.path.dirname(os.path.abspath(__file__))
     os.chdir(PATH)
+
+    logger.debug("Checking files in current directory for a CSV file.")
     for file in glob.glob("*.csv"):
-        directPath = PATH.replace("\\", "\\\\")
-        PATH = directPath + "\\\\" + file
+        #tries to get current CSV file to POST in SNOW
+        try:
+            directPath = PATH.replace("\\", "\\\\")
+            PATH = directPath + "\\\\" + file
+            ##CSV file to upload
+            csv_file = {
+                'import-file': open(f'{PATH}', 'rb')
+            }
+
+            logger.debug("Posting CSV file to SNOW for processing.")
+            ##'POST' request to process CSV into the staging table
+            r = requests.request("POST", SNOW_url, files=csv_file, auth=(SNOW_username, SNOW_password), verify=False)
+            logger.success("POST was successful.")
+        #exception is raised if there is no CSV file in the directory
+        except:
+            logger.error("Failed to find a CSV file in the current directory.")
+            print("Error: No CSV in file directory.")
         break
         
-    ##CSV file to upload
-    csv_file = {
-        'import-file': open(f'{PATH}', 'rb')
-    }
-
-    ##'POST' request to process CSV into the staging table
-    r = requests.request("POST", SNOW_url, files=csv_file, auth=(SNOW_username, SNOW_password), verify=False)
 
 if __name__ == "__main__":
     credentials() #credentials
