@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import csv
+from datetime import datetime
 import json
-import time
 from loguru import logger
 import requests
 import urllib3
 import configparser
 import glob, os
 
+date = datetime.now().strftime("%Y_%m_%d-%I-%M-%S_%p")
 D42_username=''
 D42_password=''
 D42_url=''
@@ -40,60 +41,89 @@ device_sub_type=[]
 discovery_source=[]
 
 
-logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
+logger.add(f"{date}.log")
 @logger.catch
-#rename function that is not credentials since it stores more than that
-def credentials():
-    logger.debug("Initializing configuration parser...")
-    config = configparser.ConfigParser()
-    logger.debug("Reading configuration file 'config.ini'...")
-    config.read('config.ini')
-    #credentials for D42
-    D42_username = config.get('Device42', 'user')
-    D42_password = config.get('Device42', 'pass')
-    D42_url = config.get('Device42', 'url')
-    D42_location = config.get('Device42', 'location')
-    D42_type = config.get('Device42', 'content-type')
-    ##credentials for SNOW
-    SNOW_username = config.get('ServiceNow', 'user')
-    SNOW_password = config.get('ServiceNow', 'pass')
-    SNOW_url = config.get('ServiceNow', 'url')
+def config():
+    logger.info("--- NOTE: Running 'config()' function ---")
+    try:
+        logger.info("Initializing configuration parser...")
+        config = configparser.ConfigParser()
+        logger.info("Reading configuration file 'config.ini'...")
+        config.read('config.ini')
 
-    return{
-        D42_username,
-        D42_password,
-        D42_url,
-        D42_location,
-        D42_type,
-        SNOW_username,
-        SNOW_password,
-        SNOW_url
-    }
+        #referencing global variables
+        global D42_username
+        global D42_password
+        global D42_location
+        global D42_url
+        global D42_type
+        global SNOW_username
+        global SNOW_password
+        global SNOW_url
 
+        #credentials for D42
+        D42_username = config.get('Device42', 'user')
+        D42_password = config.get('Device42', 'pass')
+        D42_url = config.get('Device42', 'url')
+        D42_location = config.get('Device42', 'location')
+        D42_type = config.get('Device42', 'content-type')
+        ##credentials for SNOW
+        SNOW_username = config.get('ServiceNow', 'user')
+        SNOW_password = config.get('ServiceNow', 'pass')
+        SNOW_url = config.get('ServiceNow', 'url')
 
-logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
+        logger.success("Configuration details have been retrieved.")
+        
+    except:
+        logger.error("Failed to read 'config.ini' file...")
+
 @logger.catch
 def pullD42():
-    logger.warning("Disabled all unverified HTTPS warnings.")
+    logger.info("--- NOTE: Running 'pullD42()' function ---")
+    logger.warning("Disabled all unverified HTTPS warnings...")
     ##disables warning for unverified HTTPS (url)
     urllib3.disable_warnings()
-
     headers = {
                 'Content-Type': D42_type
             }
-    logger.debug("Requesting 'GET' Device42 Devices data...")
-    r = requests.request("GET", D42_url, auth=(D42_username, D42_password), headers=headers, verify=False)
-    dictionary = json.loads(r.text)
-    logger.success("Pulled JSON payload into a dictionary.")
 
-    return dictionary
-    
-logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
+    logger.info("[GET] Requesting Device42 data...")
+    try:
+        global dictionary
+        logger.info("Converting JSON payload into a dictionary, this may take a brief moment...")
+        r = requests.request("GET", D42_url, auth=(D42_username, D42_password), headers=headers, verify=False)
+        dictionary = json.loads(r.text)
+        logger.success("JSON payload has been converted into a dictionary.")
+    except:
+        logger.error("[GET] Failed to request Device42 data. Make sure the information stored in the 'config.ini' file is correct. If it is, make sure the 'config()' function runs before the 'pullD42()' function.")
+
 @logger.catch
 def fields():
+    logger.info("--- NOTE: Running 'fields()' function ---")
+
+    global device_IDs
+    global deviceNames 
+    global customers
+    global locations
+    global service_levels 
+    global statuses 
+    global classes  
+    global cc_types 
+    global manufacturer 
+    global model_numbers 
+    global ip_addresses
+    global virtual_host_names 
+    global serial_numbers 
+    global mac_address 
+    global descriptions
+    global usernames
+    global fs_passwords
+    global active_contract
+    global device_sub_type
+    global discovery_source
     #---------------------------------------------------------------------------------------------    
     ##Device name is 'Name'
-    logger.success("Appending 'Name' data...")
+    logger.debug("Appending 'Name' data...")
     deviceNames = []
     for e in range(len(dictionary.get('Devices'))):
         deviceNames.append(dictionary.get('Devices')[e]['name'])
@@ -119,7 +149,6 @@ def fields():
     for e in dictionary['Devices'][:]:
         if 'location' in e:
             locations[i].append(D42_location)
-            #locations[i].append(e['location'])
         elif 'location' not in e:
             locations[i].append(D42_location)
         i=i+1  
@@ -285,7 +314,7 @@ def fields():
     ## Needs to be coded in Verizon_Box since D42 sandbox is not giving proper output.
     ## Test in the box and parse hdd_details to get description or it might retrieve from just Devices than hdd_details
     #if dictionary is Empty:
-    logger.success("Appending 'Description' data....")
+    logger.debug("Appending 'Description' data....")
     descriptions = [[] for i in range(len(dictionary['Devices'][:]))]
     i = 0
 
@@ -317,15 +346,19 @@ def fields():
 
     #---------------------------------------------------------------------------------------------
 
-    ## 'Active Contract [Configuration Item]' in ServiceNow is not in Verizon_Box
-    ## Always True
+    ## 'Active Contract [Configuration Item]' in ServiceNow is 'in_service' in D42
     ## [WORKING PROPERLY]
-    #if dictionary is Empty:
     logger.debug("Appending 'Active Contract [Configuration Item]' data...")
-    active_contract = []
-    for e in range(len(dictionary.get('Devices'))):
-        active_contract.append(True)
-        #print(len(active_contract))
+    active_contract = [[] for i in range(len(dictionary['Devices'][:]))]
+    i = 0
+
+    for e in dictionary['Devices'][:]:
+        if 'in_service' in e:
+            active_contract[i].append(e['in_service'])
+        elif 'in_service' not in e:
+            active_contract[i].append(None)
+        i=i+1
+
     logger.success("Appending of 'Active Contract [Configuration Item]' complete.")
 
     #---------------------------------------------------------------------------------------------
@@ -376,32 +409,12 @@ def fields():
     for e in range(len(dictionary.get('Devices'))):
         discovery_source.append('Device42')
     logger.success("Appending of 'Discovery Source' complete.")
-
     #---------------------------------------------------------------------------------------------
-    return {device_IDs,
-            deviceNames, 
-            customers,
-            locations, 
-            service_levels, 
-            statuses, 
-            classes,  
-            cc_types, 
-            manufacturer, 
-            model_numbers, 
-            ip_addresses, 
-            virtual_host_names, 
-            serial_numbers, 
-            mac_address, 
-            descriptions,
-            usernames,
-            fs_passwords,
-            active_contract,
-            device_sub_type,
-            discovery_source}
+  
 
-logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
 @logger.catch
 def createCSV():
+    logger.info("--- NOTE: Running 'createCSV()' function ---")
     # [WORKING]
     CMDB_Items = [
                 'ID',
@@ -421,7 +434,7 @@ def createCSV():
                 'Description [Configuration Item]',     
                 'Username [Configuration Item]',        #IGNORED
                 'FS Password [Configuration Item]',     #IGNORED
-                'Active Contract [Configuration Item]', #Always 'True'
+                'Active Contract [Configuration Item]',
                 'Physical Subtype',
                 'Discovery Source'                      #Always 'Device42'
                 ]
@@ -487,10 +500,11 @@ def createCSV():
     x.close()
     logger.success("Successfully re-written data to CSV file to completion.")
 
-logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
+#logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
 @logger.catch
 def postSNOW():
-    logger.warning("Disabled all unverified HTTPS warnings.")
+    logger.info("--- NOTE: Running 'postSNOW()' function ---")
+    logger.warning("Disabled all unverified HTTPS warnings...")
     ##disables warning for unverified HTTPS (url)
     urllib3.disable_warnings()
 
@@ -510,11 +524,10 @@ def postSNOW():
             csv_file = {
                 'import-file': open(f'{PATH}', 'rb')
             }
-
-            logger.debug("Posting CSV file to SNOW for processing.")
+            logger.debug("[POST] Sending CSV file to SNOW for processing.")
             ##'POST' request to process CSV into the staging table
             r = requests.request("POST", SNOW_url, files=csv_file, auth=(SNOW_username, SNOW_password), verify=False)
-            logger.success("POST was successful.")
+            logger.success("[POST] Complete.")
         #exception is raised if there is no CSV file in the directory
         except:
             logger.error("Failed to find a CSV file in the current directory.")
@@ -523,8 +536,19 @@ def postSNOW():
         
 
 if __name__ == "__main__":
-    credentials() #credentials
+    config() #config
     pullD42() #Pulls Devices data from D42
     fields() #Populates Devices record fields from lists (all 20 unique fields)
     createCSV() #creates CSV file with Devices record fields data
-    postSNOW() #Posts CSV file to SNOW staging table and processes
+    #postSNOW() #Posts CSV file to SNOW staging table and processes
+
+
+    ##To Test, edit 'config.ini' with the following information (ignore SNOW information):
+    '''
+    [Device42]
+    user : guest
+    pass : device42_rocks!
+    url : https://swaggerdemo.device42.com/api/1.0/devices/all/
+    location : D42 sandbox, corp.
+    content-type : application/json
+    '''
