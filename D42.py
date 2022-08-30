@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import csv
 from datetime import datetime
+import email
 import json
 from loguru import logger
 import requests
@@ -54,6 +55,7 @@ def config():
         #referencing global variables
         global D42_username
         global D42_password
+        global D42_customer
         global D42_location
         global D42_url
         global D42_type
@@ -65,6 +67,7 @@ def config():
         D42_username = config.get('Device42', 'user')
         D42_password = config.get('Device42', 'pass')
         D42_url = config.get('Device42', 'url')
+        D42_customer = config.get('Device42', 'customer')
         D42_location = config.get('Device42', 'location')
         D42_type = config.get('Device42', 'content-type')
         ##credentials for SNOW
@@ -396,9 +399,9 @@ def fields():
 
     for e in dictionary['Devices'][:]:
         if 'customer' in e:
-            customers[i].append(e['customer'])
+            customers[i].append(D42_customer)
         elif 'customer' not in e:
-            customers[i].append("")
+            customers[i].append(D42_customer)
         i=i+1
     logger.success("Appending of 'Customer' complete.")
 
@@ -464,43 +467,50 @@ def createCSV():
     with open('Verizon_Data.csv', 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
 
-        logger.debug("Writing headers to CSV file...")
-        # write the headers
-        writer.writerow(CMDB_Items)
+        try:
+            logger.debug("Writing headers to CSV file...")
+            # write the headers
+            writer.writerow(CMDB_Items)
+            logger.success("Successfully written headers to CSV file...")
+        except:
+            logger.error("Failed to write headers to CSV file.")
 
-        logger.debug("Writing rows to CSV file...")
-        # write the rows
-        for data in CMDB_Data:
-            writer.writerow(data)
+        if len(CMDB_Data) != 0:
+            logger.debug("Writing rows to CSV file...")
+            # write the rows
+            for data in CMDB_Data:
+                writer.writerow(data)
+            logger.success("Successfully written rows to CSV file...")
 
-        logger.success("Successfully written data to CSV file...")
-    # Removes all unnecessary chars/symbols from csv file
-    # reading the CSV file
-    text = open("Verizon_Data.csv", "r")
+            # Removes all unnecessary chars/symbols from csv file
+            # reading the CSV file
+            text = open("Verizon_Data.csv", "r")
 
-    #join() method combines all contents of 
-    # csvfile.csv and formed as a string
-    text = ''.join([i for i in text]) 
+            #join() method combines all contents of 
+            # csvfile.csv and formed as a string
+            text = ''.join([i for i in text]) 
 
-    logger.debug("Removing special characters and unwanted data from CSV file...")
-    # search and replace the contents
-    text = text.replace("[None]", "") 
-    text = text.replace("[]", "") 
-    text = text.replace("[", "") 
-    text = text.replace("]", "") 
-    text = text.replace(f"[\'", "")
-    text = text.replace(f"\']", "")
-    text = text.replace(f"\'", "")
+            logger.debug("Removing special characters and unwanted data from CSV file...")
+            # search and replace the contents
+            text = text.replace("[None]", "") 
+            text = text.replace("[]", "") 
+            text = text.replace("[", "") 
+            text = text.replace("]", "") 
+            text = text.replace(f"[\'", "")
+            text = text.replace(f"\']", "")
+            text = text.replace(f"\'", "")
 
-    # testD42_Data.csv is the output file opened in write mode
-    x = open("Verizon_Data.csv","w")
-    
-    # all the replaced text is written in the output.csv file
-    x.writelines(text)
-    x.close()
-    logger.success("Successfully re-written data to CSV file to completion.")
+            # testD42_Data.csv is the output file opened in write mode
+            x = open("Verizon_Data.csv","w")
+            
+            # all the replaced text is written in the output.csv file
+            x.writelines(text)
+            x.close()
+            logger.success("Successfully re-written data to CSV file to completion.")
+        else:
+            logger.error("Failed to write rows to CSV file. The data to write does not exist.")
 
-#logger.add(f"{D42_location}_{time}.log", level="Trace", rotation="500 MB")
+
 @logger.catch
 def postSNOW():
     logger.info("--- NOTE: Running 'postSNOW()' function ---")
@@ -531,7 +541,6 @@ def postSNOW():
         #exception is raised if there is no CSV file in the directory
         except:
             logger.error("Failed to find a CSV file in the current directory.")
-            print("Error: No CSV in file directory.")
         break
         
 
@@ -549,6 +558,7 @@ if __name__ == "__main__":
     user : guest
     pass : device42_rocks!
     url : https://swaggerdemo.device42.com/api/1.0/devices/all/
+    customer : D42 Customer
     location : D42 sandbox, corp.
     content-type : application/json
     '''
