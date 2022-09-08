@@ -18,6 +18,15 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
+<!-- Unsure how to link
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![MIT License][license-shield]][license-url]
+[![LinkedIn][linkedin-shield]][linkedin-url]
+
+
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
@@ -36,8 +45,6 @@
     <a href="https://github.com/CC-Digital-Innovation/D42/blob/main/Demo%20Presentation.md">View Demo Presentation</a>
     ·
     <a href="https://github.com/CC-Digital-Innovation/D42/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/CC-Digital-Innovation/D42/issues">Request Feature (Request Log)</a>
   </p>
 </div>
 
@@ -48,7 +55,10 @@
   <summary>Table of Contents</summary>
   <ol>
     <li>
-      <a href="#about-the-project">About The Project</a>
+      <a href="#usage">Usage</a>
+      <ul>
+        <li><a href="#how">How</a></li>
+      </ul>
       <ul>
         <li><a href="#built-with">Built With</a></li>
       </ul>
@@ -58,26 +68,29 @@
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
         <li><a href="#installation">Installation</a></li>
-        <li><a href="#scheduler">Task Scheduler Automation Setup</a></li>
       </ul>
     </li>
     <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#license">License</a></li>
+    <li><a href="#history">History</a></li>
     <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
+    <li><a href="#acknowledgments">Acknowledgments</a>
+    <li><a href="#license">License</a></li>
+    </li>
   </ol>
 </details>
 
-
+---
 
 <!-- ABOUT THE PROJECT -->
-## About The Project
-Automate pulling Device42 data into a CSV file that is then stagged in ServiceNow to process the information using a task scheduler for execution given a date and time.
+## Usage
+Automate pulling Device42 data into a CSV file that is then stagged in ServiceNow to process the file information using a task scheduler for execution given a date and time.
+
+## How
+![process-overview](images/ProcessOverview.png)
+
 <a href="https://github.com/CC-Digital-Innovation/D42/blob/main/Demo%20Presentation.md"><strong>Further information »</strong></a>
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
+---
 
 ### Built With
 
@@ -91,75 +104,47 @@ Automate pulling Device42 data into a CSV file that is then stagged in ServiceNo
 ## Getting Started
 
 ### Prerequisites
-1. * Get sign-in access to Customer environment through [Tettra]()
-2. * Have [Splashtop](https://www.splashtop.com/) installed to enter Customer environment
-2. * Enter Customer environment through Splashtop
+1. [Python version 3.7.14+](https://www.python.org/downloads/)
+3. Customer virtual environment
+3. Clone repository
+4. Install `requirements.txt`
 
-1. * Have [Python](https://www.python.org/downloads/) installed in Customer environment. If unsure of a previous install, open Windows Command Prompt
-```sh
-where.exe python
-```
-`NOTE:` You will also need the absolute path where Python is located later (copy the path or keep prompt open)
 
 ---
 
 ## Installation
-
-1.  Clone the repository
+### Clone the repository
    ```sh
    git clone https://github.com/CC-Digital-Innovation/D42.git
-   ```
+  ```
 
-### Edit `config.ini` file
-
-#### [Device42]
-2. * Get `username` and `password` from [TETTRA PAGE]()
-3. * Get Device42 `url` for the environment (Tettra?)
-4. * Get `customer` and `location` values from Customer
-5. * Set `content-type`
+### Install `requirements.txt`
 ```sh
-content-type : application/json
+pip install -r requirements.txt
 ```
-
-#### [ServiceNow]
-6. * Get `username` and `password` from [TETTRA PAGE]()
-7. * Get Device42 `url` for the environment (Tettra?)
-8. * Save and close `config.ini`
-
-### EXAMPLE
-![](images/configexample.png)
+`NOTE:` The following will be installed
+* [loguru version 0.6.0](https://pypi.org/project/loguru/)
+* [requests version 2.28.1](https://pypi.org/project/requests/2.8.1/)
+* [urllib3 version 1.26.12](https://urllib3.readthedocs.io/en/stable/)
 
 ---
-## Scheduler
-### 1. Open `Task Scheduler` in Window's search bar
-* Double-click to open `Task Scheduler Library`
-* Under the Action tab, click `Create Task...`
-### 2. After the pop-up appears, make sure you are under `General` tab
-* Fill the Name field as : `D42 to SNOW Integration`
-* Description is optional
-* Choose button : `Run whether user is logged in or not` and leave unchecked : `Do not store password. The task will only have access to local computer resources.`
-* Checkmark : `Run with the highest Privileges`
-### 3. Under the `Trigger` tab, select `New...`
-* Choose the date(s) and time(s) when the D42 to SNOW integration will occur
-* At the bottom of the Advanced Settings section, checkmark `Enabled` and click `OK`
-### 4. Under the `Actions` tab, select `New...`
-* From the Action drop-down, select `Start a program`
-* Enter Python's absolute path in the `Program/script` field
-* For Add arguments (optional), enter `D42.py`
-* for Start in (optional), enter the path location where `D42.py` sits and click `OK`
-### 5. Under the `Conditions` tab, only have the following checkmarked
-* Start the task only if the computer is on AC power
-* Stop if the computer switches to battery power
-### 6. Under the `Settings` tab, only have the following checkmarked
-* Allow task to be run on demand
-* Stop the task if it runs longer than AND select `1 hour` under the drop-down box
-* If the running task does not end when requested, force it to stop
-* If the task is already running, the the following rule applies, select from the drop-down : `Do not start a new instance`
-### 4. Task Scheduler Complete
-* Click `OK`
-* Right-click on the task name (D42 to SNOW Integration) and select `Run`
-* Process is now fully complete. It will execute based off what was specified in step 3.
 
+### Edit `config.ini`
+Replace placeholders:
+```js
+[Device42]
+user : D42_USERNAME_PLACEHOLDER
+pass : D42_PASSWORD_PLACEHOLDER
+url : D42_URL_PLACEHOLDER
+customer : D42_CUSTOMER_PLACEHOLDER
+location : D42_LOCATION_PLACEHOLDER
+content-type : application/json
+
+[ServiceNow]
+user : SNOW_USERNAME_PLACEHOLDER
+pass : SNOW_PASSWORD_PLACEHOLDER
+url : SNOW_URL_PLACEHOLDER
+```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -167,14 +152,39 @@ content-type : application/json
 
 <!-- ROADMAP -->
 ## Roadmap
-
--  Store CSV file to database
-- Email alert when task is completed
+<p> 1. Store CSV file to database
+</p>
+<p>
+2. Email alert when task is completed
+</p>
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ---
+<!-- HISTORY -->
+## History
+<p>version 0.1 (initial release) - 2022/08/08</p>
+<p>version 0.2 (readme.md) - 2022/09/01</p>
+<p>version 0.3 (readme.md updates and repo cleanup) - 2022/09/07</p>
 
+---
+<!-- CONTACT -->
+## Contact
+
+Alex Barraza - [@sabarraz](https://github.com/sabarraz) - alex.barraza@computacenter.com
+
+Project Link: [https://github.com/CC-Digital-Innovation/D42](https://github.com/CC-Digital-Innovation/D42)
+
+
+<!-- ACKNOWLEDGMENTS -->
+## Acknowledgments
+[Stefan Axelson](stefan.axelson@computacenter.com)
+
+[Richard Travellin](richard.travellin@computacenter.com)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+---
 <!-- LICENSE -->
 ## License
 
@@ -189,28 +199,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
----
-
-<!-- CONTACT -->
-## Contact
-
-Alex Barraza - [@sabarraz](https://github.com/sabarraz) - alex.barraza@computacenter.com
-
-Project Link: [https://github.com/CC-Digital-Innovation/D42](https://github.com/CC-Digital-Innovation/D42)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-* [Stefan Axelson](stefan.axelson@computacenter.com)
-* [Richard Travellin](richard.travellin@computacenter.com)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
